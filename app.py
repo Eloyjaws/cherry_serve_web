@@ -1,16 +1,11 @@
 import os
 import torch
+import numpy as np
 from PIL import Image
 import streamlit as st
 from collections import Counter
 from torchvision import models, transforms
 from htbuilder import HtmlElement, br
-
-import numpy as np
-from matplotlib import colors
-from scipy.spatial import cKDTree as KDTree
-from scipy.misc import face
-
 
 st.set_page_config(
     page_title="Technoserve - Ripeness Predictor",
@@ -19,14 +14,13 @@ st.set_page_config(
 )
 
 hide_streamlit_style = """
-<style>
-header > div:first-child {
-  background-image: linear-gradient(90deg, rgb(246, 51, 102), rgb(46 154 255), rgb(9 171 59));
-}
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-</style>
-
+    <style>
+    header > div:first-child {
+    background-image: linear-gradient(90deg, rgb(246, 51, 102), rgb(46 154 255), rgb(9 171 59));
+    }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    </style>
 """
 
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -72,12 +66,9 @@ def getRipenessScore(im):
         [255, 0, 0],  # red
         [0, 255, 0],  # green
         [0, 0, 255],  # blue
-        # [255, 255, 0],  # yellow
-        # [0, 255, 255],  # cyan
-        # [255, 0, 255],  # magenta
         [0, 0, 0],  # black
-        [255, 255, 255],
-    ]  # white
+        [255, 255, 255],  # white
+    ] 
 
     imrgb = im.convert("RGB")
     (w, h) = im.size[0], im.size[1]
@@ -110,57 +101,10 @@ def getRipenessScore(im):
     result = outimg.convert("RGB")
 
     pixels = result.getdata()
-    print(Counter(pixels))
-
-    return result
-
-
-def getRipenessScoreNaive(image):
-    pixels = image.getdata()
-    print(Counter(pixels))
-
-
-def getRipenessScoreKD(image):
-    use_colors = {
-        k: colors.cnames[k] for k in ["red", "green", "blue", "black", "purple"]
-    }
-
-    named_colors = {
-        k: tuple(map(int, (v[1:3], v[3:5], v[5:7]), 3 * (16,)))
-        for k, v in use_colors.items()
-    }
-    ncol = len(named_colors)
-
-    ncol -= 1
-    no_match = named_colors.pop("purple")
-
-    color_tuples = list(named_colors.values())
-    color_tuples.append(no_match)
-    color_tuples = np.array(color_tuples)
-
-    color_names = list(named_colors)
-    color_names.append("no match")
-
-    # get example picture
-    img = face()
-
-    # build tree
-    tree = KDTree(color_tuples[:-1])
-    # tolerance for color match `inf` means use best match no matter how
-    # bad it may be
-    tolerance = np.inf
-    # find closest color in tree for each pixel in picture
-    dist, idx = tree.query(img, distance_upper_bound=tolerance)
-    # count and reattach names
-    counts = dict(zip(color_names, np.bincount(idx.ravel(), None, ncol + 1)))
-
-    print(counts)
-
+    return Counter(pixels)
 
 st.markdown(br(), unsafe_allow_html=True)
 file_up = st.file_uploader("Upload an image", type="jpg")
-st.markdown(br(), unsafe_allow_html=True)
-
 
 if file_up:
     image = Image.open(file_up)
@@ -173,10 +117,9 @@ if file_up:
     in_image = tensor_to_PIL(image * 0.5 + 0.5)
     out_image = tensor_to_PIL(output * 0.5 + 0.5)
 
-    im3 = getRipenessScore(out_image)
+    frequencies = getRipenessScore(out_image)
 
-    col1, col2, col3 = st.beta_columns(3)
-    # col1, col2 = st.beta_columns(2)
+    col1, col2 = st.beta_columns(2)
 
     col1.header("Original")
     col1.image(in_image, use_column_width=True)
@@ -184,5 +127,26 @@ if file_up:
     col2.header("Mask")
     col2.image(out_image, use_column_width=True)
 
-    col3.header("Rounded pixels")
-    col3.image(im3, use_column_width=True)
+    refColours = {
+        "red": (255, 0, 0),
+        "green": (0, 255, 0),
+        "blue": (0, 0, 255),
+        "black": (0, 0, 0),
+        "white": (255, 255, 255),
+    }
+
+    redCount = frequencies.get(refColours.get("red"))
+    blueCount = frequencies.get(refColours.get("blue"))
+    greenCount = frequencies.get(refColours.get("green"))
+
+    totalCount = redCount + blueCount + greenCount
+    ripenessScore = (redCount / totalCount) * 100
+    overripenessScore = (blueCount / totalCount) * 100
+    underripenessScore = (greenCount / totalCount) * 100
+
+    st.markdown(br(), unsafe_allow_html=True)
+    res1, res2, res3 = st.beta_columns(3)
+
+    res1.success(f"UnderRipe: {underripenessScore:.2f}%")
+    res2.info(f"OverRipe: {overripenessScore:.2f}%")
+    res3.error(f"Ripe: {ripenessScore:.2f}%")
