@@ -135,9 +135,9 @@ if file_up:
         "white": (255, 255, 255),
     }
 
-    redCount = frequencies.get(refColours.get("red"))
-    blueCount = frequencies.get(refColours.get("blue"))
-    greenCount = frequencies.get(refColours.get("green"))
+    redCount = frequencies.get(refColours.get("red"), 0)
+    blueCount = frequencies.get(refColours.get("blue"), 0)
+    greenCount = frequencies.get(refColours.get("green"), 0)
 
     totalCount = redCount + blueCount + greenCount
     ripenessScore = (redCount / totalCount) * 100
