@@ -32,8 +32,6 @@ st.write(
     """
 )
 
-model = torch.jit.load("benchmark.ptl", map_location="cpu")
-
 transform = transforms.Compose(
     [
         transforms.Resize(512),
@@ -111,6 +109,7 @@ if file_up:
 
     image = transform(image)
     image = torch.unsqueeze(image, 0)
+    model = torch.jit.load("benchmark.ptl", map_location="cpu")
     model.eval()
     output = model(image)
 
