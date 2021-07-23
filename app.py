@@ -112,6 +112,7 @@ if file_up:
     model = torch.jit.load("benchmark.ptl", map_location="cpu")
     model.eval()
     output = model(image)
+    del model
 
     in_image = tensor_to_PIL(image * 0.5 + 0.5)
     out_image = tensor_to_PIL(output * 0.5 + 0.5)
