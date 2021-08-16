@@ -1,11 +1,10 @@
-import os
 import torch
 import numpy as np
 from PIL import Image
 import streamlit as st
 from collections import Counter
-from torchvision import models, transforms
-from htbuilder import HtmlElement, br
+from torchvision import transforms
+from htbuilder import br
 
 st.set_page_config(
     page_title="Technoserve - Ripeness Predictor",
@@ -13,6 +12,7 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
+# noinspection SpellCheckingInspection
 hide_streamlit_style = """
     <style>
     header > div:first-child {
@@ -55,6 +55,9 @@ def distance(col1, col2):
     r1, g1, b1 = col1
     r2, g2, b2 = col2
     return (r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2
+
+def get_model():
+    return torch.jit.load("benchmark.ptl", map_location="cpu")
 
 
 # Adapted from  https://stackoverflow.com/questions/50545192/count-different-colour-pixels-python
@@ -101,6 +104,7 @@ def getRipenessScore(im):
     pixels = result.getdata()
     return Counter(pixels)
 
+
 st.markdown(br(), unsafe_allow_html=True)
 file_up = st.file_uploader("Upload an image", type="jpg")
 
@@ -109,7 +113,7 @@ if file_up:
 
     image = transform(image)
     image = torch.unsqueeze(image, 0)
-    model = torch.jit.load("benchmark.ptl", map_location="cpu")
+    model = get_model()
     model.eval()
     output = model(image)
     del model
